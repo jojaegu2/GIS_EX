@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kt.mapper.GisMapper">
+
+	<!-- 클릭영역 주소값 return -->
+	<select id="selectList" parameterType="com.kt.vo.GisVO" resultType="com.kt.vo.GisVO">
+		<!-- VO랑 변수명 맞춰야함 -->
+	<![CDATA[
+		select 
+		admdong_cd as emdCd
+       ,admdong_nm as emdKorNm
+  	from alp_admdong_alp_m_sum
+ 	where st_contains(st_transform(st_setsrid(geom,5179),5181), st_setsrid(st_point(#{lon},#{lat}),5181)) = 't'
+	]]>
+	</select>
+	
+<!-- AND  sgg_cd = #{sggCd} -->
+	<!-- 선택된 구에 해당하는 상권 정보 가져오기 -->
+	<select id="getSangList" parameterType="com.kt.vo.SangVO" resultType="com.kt.vo.SangVO">
+	
+		<!-- VO랑 변수명 맞춰야함 -->
+
+	</select>
+	
+	<!--  강남구 도서관 정보 가져오기  -->
+	<select id="getLibraryList" parameterType="com.kt.vo.SangVO" resultType="com.kt.vo.SangVO">
+		<![CDATA[
+		select
+		library_nm AS libraryNm --도서관명
+		, library_sgg_nm AS librarySggNm --도서관 해당구
+		, lat AS lat --위도
+		, lon AS lon --경도
+		, st_astext(st_transform(st_setsrid(st_point(lon::numeric,lat::numeric),4326),5181)) AS point
+		, sig_cd AS sggCd
+		from library
+		where sig_cd = #{sggCd}
+
+			
+	]]>
+		<!-- VO랑 변수명 맞춰야함 -->
+
+	</select>
+	
+	<!-- 상권정보 가져와서 클러스터링 -->
+	<select id="getSangCluster" parameterType="com.kt.vo.SangVO" resultType="com.kt.vo.SangVO">
+		<!-- VO랑 변수명 맞춰야함 -->
+	<![CDATA[
+		 SELECT
+			 tra_nm --상호명
+			,admdong_nm --읍면동명
+			,xcrd::numeric --map함수에 적용될때는 숫자여야하므로 numeric으로 casting
+			,ycrd::numeric
+		 FROM TRA_XYCRD_SEOULa
+		WHERE tra_upjong_mid_cd = #{upjongMidCd} --'Q12(커피점/카페)' 'D03(종합소매점(편의점))'
+		ORDER BY tra_num desc		  
+	    LIMIT 3000
+	]]>
+	</select>
+	
+	<!-- 서울시 시군구 명 가져오기 -->
+	<select id="getSeoulList" resultType="com.kt.vo.SangVO">
+		<!-- VO랑 변수명 맞춰야함 -->
+		<!-- VO는 언더바 빼야함 -->
+		<!--  화면에서 코드가져오기 위해 -->
+	<![CDATA[
+		select
+		sig_cd as sggCd, 
+		sig_kor_nm as sggNm 
+		from aaa
+		group by sig_cd, sig_kor_nm
+		order by sig_kor_nm
+	]]>
+	</select>
+	
+		<!--  추가 -->
+		<!-- 서울시 읍면동 명 가져오기 -->
+	<select id="getSeoulList2" parameterType="com.kt.vo.SangVO" resultType="com.kt.vo.SangVO">
+		<!-- VO랑 변수명 맞춰야함 -->
+		<!-- VO는 언더바 빼야함 -->
+		<!--  화면에서 코드가져오기 위해 -->
+	<![CDATA[
+		select
+		emd_cd as emdCd, 
+		emd_nm as emdNm 
+		from aaa
+		where sig_cd = #{sggCd}
+		group by emd_cd, emd_nm
+		order by emd_nm
+	]]>
+	</select>
+
+	<!-- 서울시 종로구 경계영역 가져오기 -->
+	<select id="getSeoulGeom" parameterType="com.kt.vo.guVO"
+		resultType="com.kt.vo.guVO">
+		<!-- VO랑 변수명 맞춰야함 -->
+		<!-- VO는 언더바 빼야함 -->
+		
+			<!-- 코드받아서 영역만들기 -->
+	<![CDATA[
+		select 
+		baseym as baseym, 
+		code as sigCd, 
+		wkt as geom 
+		from ex
+		where code=#{sigCd}
+
+	]]>
+	</select>
+	
+	<!--  서울시 읍면동 경계영역 가져오기 -->
+	<select id="getSeoulGeom2" parameterType="com.kt.vo.guVO" resultType="com.kt.vo.guVO">
+	<![CDATA[
+		select 
+		baseym as baseym, 
+		code as emdCd, 
+		wkt as geom
+		from emd
+		where code=#{emdCd}
+	]]>
+	</select>
+	
+	<!--  코드받아서 영역만들기 -->
+	<!-- SELECT emd_cd ,emd_kor_nm ,st_astext(st_transform(geom,3857)) geom 
+		,rank FROM tl_scco_emd WHERE emd_cd like concat(#{sigCd},'%') -->
+		
+<!-- SELECT 	
+		T101.admdong_cd AS emdCd
+		,substr(T101.admdong_nm, 11) AS emdKorNm
+		,st_astext(st_transform(st_setsrid(T101.geom,5179),3857)) AS geom
+		,ntile(5) over(ORDER BY T102.cnt desc) AS rank
+		,cnt AS traCnt
+		FROM alp_admdong_alp_m_sum T101
+		LEFT JOIN (SELECT admdong_cd, count(tra_num) cnt
+		             FROM tra_xycrd_3
+		            WHERE admdong_cd like concat(#{sigCd},'%')
+		            GROUP BY 1
+		           ) T102
+		  ON T101.admdong_cd = substr(T102.admdong_cd,1,8)
+	   WHERE T101.admdong_cd like concat(#{sigCd},'%') -->
+	   
+	<!-- 선택된 구의 동정보 경계영역 가져오기 -->
+	<select id="getEmdGeom" parameterType="com.kt.vo.guVO"
+		resultType="com.kt.vo.EmdVO">
+		<!-- VO랑 변수명 맞춰야함 -->
+		<!-- VO는 언더바 빼야함 -->
+		
+	<![CDATA[ 
+  select T21.emdCd
+      ,T21.emdKorNm
+      ,T21.emdGeom as emdGeom
+      ,T22.guGeom as guGeom --선택한 시군구의 센터값을 구하기위해 한단이 추가됨..드롭박스 채울때 들고오게 할 예정
+      ,T21.rank
+      ,T21.traCnt
+  from (
+        SELECT 	
+		T101.admdong_cd AS emdCd
+		,substr(T101.admdong_nm, 11) AS emdKorNm
+		,st_astext(st_transform(st_setsrid(T101.geom,5179),5181)) AS emdGeom
+		,ntile(5) over(ORDER BY T102.cnt desc) AS rank
+		,cnt AS traCnt
+		FROM alp_admdong_alp_m_sum T101
+		LEFT JOIN (SELECT admdong_cd, count(tra_num) cnt
+		             FROM tra_xycrd_seoul
+		            WHERE admdong_cd like concat(#{sigCd},'%')
+		            GROUP BY 1
+		           ) T102
+		  ON T101.admdong_cd = substr(T102.admdong_cd,1,8)
+	   WHERE T101.admdong_cd like concat(#{sigCd},'%')) T21
+        ,(
+         select substr(admdong_cd,1,5)as sgg_cd
+               ,st_astext(st_multi(st_union(st_transform(st_setsrid(geom,5179),5181)))) as guGeom
+           from alp_admdong_alp_m_sum
+          where substr(admdong_cd,1,5) like #{sigCd}
+          group by 1 ) T22
+ where substr(T21.emdCd,1,5) = T22.sgg_cd
+	]]>
+	</select>
+</mapper>
